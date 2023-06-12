@@ -4,11 +4,20 @@ const axios = require('axios');
 const https = require('https')
 const fs = require('fs');
 
-axios.defaults.httpsAgent = new https.Agent({ rejectUnauthorized: false });
-
 const configPath = './config.json';
 const configData = fs.readFileSync(configPath, 'utf8');
 const config = JSON.parse(configData);
+
+if (typeof config.certificate !== 'undefined') {
+  axios.defaults.httpsAgent = new https.Agent({
+    rejectUnauthorized: config.certificate.signed,
+    cert: fs.readFileSync(config.certificate.path)
+  });
+} else {
+  axios.defaults.httpsAgent = new https.Agent({
+    rejectUnauthorized: false,
+  });
+}
 
 console.log('Loaded configuration:', config);
 
