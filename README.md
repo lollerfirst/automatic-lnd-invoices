@@ -86,7 +86,7 @@ Then create a user with read and write privileges on the *"invoices"* table.
 
 Replace the sample values in the configuration files with your paramenters.
 
-	- *"mysql"* contains the necessary information for the access to the database;
-	- *"lndApiUrl"* contains the exact URL at which the LND node is reachable, for local installations it's ```https://localhost:8080```
-	- *"certificate"* is not mandatory and -if provided- tells axios to use a specific certificate.
+- *"mysql"* contains the necessary information for the access to the database;
+- *"lndApiUrl"* contains the exact URL at which the LND node is reachable, for local installations it's ```https://localhost:8080```;
+- *"certificate"* is not mandatory and -if provided- tells axios to use a specific certificate;
  
