@@ -1,0 +1,12 @@
+{
+    "mysql" : {
+        "host" : "127.0.0.1",
+        "user" : "testuser",
+        "password" : "password",
+        "database" : "customers"
+    },
+
+    "lndApiUrl" : "https://localhost:8080",
+
+    "macaroon" : "0201036c6e64022f030a10d7d40e863e3e087dc978013f46fe0c861201301a170a08696e766f696365731204726561641205777269746500000620c6dbf4806a382ffb7717a324dc5aeba85c6140e13e785fb2f8c6e05b23de95e0"
+}
