@@ -9,14 +9,14 @@ const configData = fs.readFileSync(configPath, 'utf8');
 const config = JSON.parse(configData);
 
 if (typeof config.certificate !== 'undefined') {
-  axios.defaults.httpsAgent = new https.Agent({
-    rejectUnauthorized: config.certificate.signed,
-    cert: fs.readFileSync(config.certificate.path)
-  });
+	axios.defaults.httpsAgent = new https.Agent({
+		rejectUnauthorized: config.certificate.signed,
+		cert: fs.readFileSync(config.certificate.path)
+	});
 } else {
-  axios.defaults.httpsAgent = new https.Agent({
-    rejectUnauthorized: false,
-  });
+	axios.defaults.httpsAgent = new https.Agent({
+		rejectUnauthorized: false,
+	});
 }
 
 console.log('Loaded configuration:', config);
@@ -35,18 +35,19 @@ connection.connect((err) => {
 
 const lndApiUrl = config.lndApiUrl;
 const macaroon = config.macaroon;
-
+/*
 String.prototype.hexEncode = function(){
-    var hex, i;
+	var hex, i;
 
-    var result = "";
-    for (i=0; i<this.length; i++) {
-        hex = this.charCodeAt(i).toString(16);
-        result += ("000"+hex).slice(-4);
-    }
+	var result = "";
+	for (i=0; i<this.length; i++) {
+		hex = this.charCodeAt(i).toString(16);
+		result += ("000"+hex).slice(-4);
+	}
 
-    return result
+	return result
 }
+*/
 
 async function makeLndRequest(url, method, data) {
 	try {
@@ -72,22 +73,38 @@ async function checkInvoices() {
 	const currentFormattedTimestamp = moment.unix(currentTimestamp).format('YYYY-MM-DD HH:mm:ss');
 
 	const deleteQuery = 'DELETE FROM invoices WHERE expiry < ? AND status = "unpaid"';
-	const deleteResult = await connection.query(deleteQuery, [currentFormattedTimestamp]);
+
+	let deleteResult;
+	connection.query(deleteQuery, [currentFormattedTimestamp], (err, results, fields) => {
+
+		if (err) {
+			console.error('Error Delete Query:', err);
+			return;
+		}
+
+		deleteResult = results;
+	});
 
 	console.log('Expired invoices deleted:', deleteResult.affectedRows);
 
 	const unpaidQuery = 'SELECT r_hash FROM invoices WHERE status = "unpaid"';
-	const unpaidResult = await connection.query(unpaidQuery);
+	let unpaidResult;
+	connection.query(unpaidQuery, (err, results, fields) => {
+		if (err) {
+			console.error('Error unpaidQuery:', err);
+			return;
+		}
+
+		unpaidResult = results;
+	});
 
 	console.log('Number of unpaid invoices:', unpaidResult.length);
 	const unpaidInvoices = Array.isArray(unpaidResult) ? unpaidResult.map(row => row.r_hash) : [];
 	const paidInvoices = [];
 
 	for (const r_hash of unpaidInvoices) {
-		const requestHash = JSON.stringify({ r_hash_str: r_hash });
-
 		try {
-			const checkPaymentRequest = await makeLndRequest(`v1/invoice/${requestHash}`, 'GET', {});
+			const checkPaymentRequest = await makeLndRequest(`v1/invoices/${encodeURIComponent(r_hash)}`, 'GET', {});
 
 			if (checkPaymentRequest.data.settled) {
 				console.log(`Invoice with r_hash ${r_hash} has been paid.`);
@@ -100,23 +117,35 @@ async function checkInvoices() {
 
 	if (paidInvoices.length > 0) {
 		const updateQuery = 'UPDATE invoices SET status = "paid" WHERE r_hash IN ?';
-		const updateResult = await connection.query(updateQuery, [paidInvoices]);
+
+		let updateResult;
+		connection.query(updateQuery, [paidInvoices], (err, results, fields) => {
+			if (err) {
+				console.error('Error updateQuery:', err);
+				return;
+			}
+
+			updateResult = results;
+
+		});
 
 		console.log('Invoices updated:', updateResult.affectedRows);
 	}
 }
 
 async function getInvoice(r_hash) {
-	try
-	{
-		const getInvoiceQuery = 'SELECT * FROM invoices WHERE r_hash = ?';
-		const response = await connection.query(getInvoiceQuery, r_hash);
-		return response;
-	}
-	catch (error)
-	{
-		console.error('Error while retrieving invoice information:', error);
-	}
+	const getInvoiceQuery = 'SELECT * FROM invoices WHERE r_hash = ?';
+	let queryResponse;
+	connection.query(getInvoiceQuery, r_hash, (err, results, field) => {
+
+		if (err)
+		{
+			console.error('Error while querying a particular invoice:', err);
+		}
+
+		queryResponse = results;
+	});
+	return queryResponse;
 }
 
 async function insertInvoice(invoice, amount, expiry, memo) {
@@ -126,7 +155,7 @@ async function insertInvoice(invoice, amount, expiry, memo) {
 	const expiryFormatted = moment.unix(expiry).format('YYYY-MM-DD HH:mm:ss');
 
 	const query = 'INSERT INTO invoices (payment_request, value, memo, r_hash, expiry, status) VALUES (?, ?, ?, ?, ?, "unpaid")';
-	await connection.query(query, [payment_request, amount, memo, r_hash, expiryFormatted], (err, result) => {
+	connection.query(query, [payment_request, amount, memo, r_hash, expiryFormatted], (err, result) => {
 		if (err) {
 			console.error('Error executing query:', err);
 			return;
