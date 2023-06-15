@@ -32,6 +32,7 @@ describe('getInvoice', () => {
   let r_hash;
   before(async () => {
     r_hash = await generateInvoice(100, 'Test Product');
+    r_hash = r_hash.r_hash;
   });
 
   it('should retrieve and display the requested invoice information', async () => {
